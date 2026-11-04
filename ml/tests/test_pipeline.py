@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from startsit_ml.features import build_features
+from startsit_ml.predict import predict_week
 from startsit_ml.train import train
 
 
@@ -45,8 +46,33 @@ def test_features_are_lagged():
 
 
 def test_train_writes_artifacts(tmp_path):
-    metrics = train(synthetic_weekly(), test_season=2025, out=tmp_path)
+    report = train(synthetic_weekly(), test_season=2025, out=tmp_path)
     manifest = json.loads((tmp_path / "manifest.json").read_text())
     assert set(manifest["quantiles"]) == {"floor", "median", "ceiling"}
-    assert (tmp_path / "fp_ppr_ceiling.txt").exists()
-    assert 0.5 < metrics["coverage_p10_p90"] < 0.95
+    assert set(manifest["scorings"]) == {"ppr", "half_ppr", "standard"}
+    assert (tmp_path / "half_ppr_ceiling.txt").exists()
+    assert 0.5 < report["ppr"]["coverage_p10_p90"] < 0.95
+
+
+def test_predict_week_maps_ids_and_byes(tmp_path):
+    hist = synthetic_weekly()
+    train(hist, test_season=2025, out=tmp_path, scorings=["ppr"])
+    schedule = pd.DataFrame({
+        "season": 2025, "week": 17,
+        "home_team": ["BUF", "NYJ", "KC"], "away_team": ["MIA", "NE", "LV"],
+    })  # DEN and LAC are on bye
+    crosswalk = pd.DataFrame({
+        "gsis_id": [f"p{i}" for i in range(60) if i != 1],  # p1 unmapped
+        "sleeper_id": [str(1000 + i) for i in range(60) if i != 1],
+    })
+    out = predict_week(hist, schedule, crosswalk, 2025, 17, model_dir=tmp_path)
+
+    ppr = out["scorings"]["ppr"]
+    assert "1000" in ppr  # p0 plays for BUF
+    assert "1001" not in ppr  # p1 has no Sleeper ID
+    assert "1006" in out["bye"]  # p6 plays for DEN
+    assert all(f <= m <= c and f >= 0 for f, m, c in ppr.values())
+    # Week-17 actuals must not leak: scoring with them removed gives identical output.
+    trimmed = hist[~((hist.season == 2025) & (hist.week >= 17))]
+    again = predict_week(trimmed, schedule, crosswalk, 2025, 17, model_dir=tmp_path)
+    assert again["scorings"] == out["scorings"]

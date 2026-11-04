@@ -16,11 +16,13 @@ Each milestone ends with something demoable.
 **Demo:** paste a Sleeper username, get your optimal lineup.
 
 ## M2: Floor / ceiling model (weeks 2–3)
-- [ ] `ml/`: pull nflverse weekly data 2018–present
-- [ ] Features: rolling usage (snap %, target share, carries, air yards, red-zone touches), opponent position defence, Vegas implied team total, home/away
-- [ ] Train LightGBM quantile models (p10/p50/p90) per position group
-- [ ] Backtest: MAE of p50 and p10–p90 coverage per position; compare against a rolling-average baseline
-- [ ] Ship the artifact; swap `BaselineProjector` → `ModelProjector`
+- [x] `ml/`: pull nflverse weekly data 2018–present (per-season parquet cache)
+- [x] Features: rolling usage (target share, carries, air yards, WOPR), volatility, opponent position defence
+- [ ] More features: snap %, red-zone touches, Vegas implied team total, home/away
+- [x] Train LightGBM quantile models (p10/p50/p90) for PPR / half / standard
+- [x] Backtest: MAE of p50 and p10–p90 coverage per position vs a rolling-average baseline
+- [x] Weekly batch scoring → `artifacts/projections/{season}_w{week}.json`; API `ModelProjector` with baseline fallback (K/DEF) and bye weeks
+- [ ] Run on real data and publish the numbers in the README
 
 **Demo:** the slider meaningfully reshuffles close calls; publish backtest numbers in the README.
 

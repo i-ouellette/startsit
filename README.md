@@ -41,13 +41,15 @@ cd apps/web
 npm install
 npm run dev
 
-# Train models (downloads nflverse data, ~a few minutes)
+# Train models, then score this week (downloads nflverse data on first run)
 cd ml
 pip install -e ".[dev]"
 python -m startsit_ml.train --seasons 2018-2025 --test-season 2025
+python -m startsit_ml.predict --season 2026
 ```
 
-Or use `make api`, `make web`, `make test`, `make train`.
+Or use `make api`, `make web`, `make test`, `make train`, `make predict`.
+The API picks up new weekly projections automatically, with no restart needed.
 
 ## Results
 

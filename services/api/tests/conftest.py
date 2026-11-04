@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import os
 import re
 
 import pytest
 import respx
 from fastapi.testclient import TestClient
 from httpx import Response
+
+# Tests use fixture stats only, never real model files on disk.
+os.environ["STARTSIT_PROJECTOR"] = "baseline"
 
 BASE = "https://api.sleeper.app/v1"
 

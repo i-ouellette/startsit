@@ -189,7 +189,11 @@ function Row({ slot, player, max }: { slot: string; player: Player | null; max: 
             {player.name}
             <small>
               {player.position} {player.team ?? "FA"}
-              {player.injury_status && <em className={out ? "tag tag--out" : "tag"}>{player.injury_status}</em>}
+              {player.projection?.source === "bye" ? (
+                <em className="tag tag--out">Bye</em>
+              ) : (
+                player.injury_status && <em className={out ? "tag tag--out" : "tag"}>{player.injury_status}</em>
+              )}
             </small>
           </span>
           <RangeBar projection={player.projection} score={player.score} max={max} out={out} />

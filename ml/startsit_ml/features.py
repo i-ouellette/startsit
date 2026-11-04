@@ -12,6 +12,7 @@ USAGE = [
 ]
 WINDOWS = (3, 8)
 TARGET = "fantasy_points_ppr"
+POSITION_CODES = {"QB": 0, "RB": 1, "WR": 2, "TE": 3}
 
 
 def add_scoring_targets(df: pd.DataFrame) -> pd.DataFrame:
@@ -63,7 +64,8 @@ def build_features(df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
     df = add_scoring_targets(df)
     df = _player_rolling(df)
     df = _defense_allowed(df)
-    df["position_code"] = df["position"].astype("category").cat.codes
+    # Fixed mapping so training and weekly scoring always agree.
+    df["position_code"] = df["position"].map(POSITION_CODES).fillna(-1).astype(int)
     feature_cols = sorted(set(
         [c for c in df.columns if c.endswith(tuple(f"_r{w}" for w in WINDOWS))]
         + ["fp_volatility_r8", "def_allowed_r6", "games_played_prior", "position_code", "week"]

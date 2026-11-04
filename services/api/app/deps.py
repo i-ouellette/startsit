@@ -10,9 +10,10 @@ from app.store import SubscriptionStore
 
 def build_projector(sleeper: SleeperClient) -> Projector:
     s = get_settings()
-    if s.projector == "model":
-        return ModelProjector(s.model_dir)
-    return BaselineProjector(sleeper, s.baseline_lookback_weeks)
+    baseline = BaselineProjector(sleeper, s.baseline_lookback_weeks)
+    if s.projector == "baseline":
+        return baseline
+    return ModelProjector(s.model_dir, fallback=baseline)
 
 
 def get_sleeper(request: Request) -> SleeperClient:

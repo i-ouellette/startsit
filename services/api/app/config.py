@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,8 +13,10 @@ class Settings(BaseSettings):
     http_timeout_s: float = 15.0
 
     # Projections
-    projector: str = "baseline"  # "baseline" | "model"
-    model_dir: str = "../../ml/artifacts"
+    # "auto": model projections when ml/ has scored the week, baseline otherwise.
+    # "baseline": always use the rolling-average baseline.
+    projector: str = "auto"
+    model_dir: str = str(Path(__file__).resolve().parents[3] / "ml" / "artifacts")
     baseline_lookback_weeks: int = 4
 
     # CORS

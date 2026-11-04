@@ -1,12 +1,13 @@
 """Projectors return a floor/median/ceiling distribution per player.
 
 - BaselineProjector: rolling mean/std of recent weekly fantasy points (from Sleeper stats).
-- ModelProjector: loads the quantile models trained in `ml/` (milestone M2).
+- ModelProjector: serves weekly quantile-model projections scored by `ml/` (falls back to baseline).
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import statistics
 from pathlib import Path
@@ -106,15 +107,49 @@ class BaselineProjector:
 
 
 class ModelProjector:
-    """Serves the LightGBM quantile models produced by `ml/startsit_ml/train.py` (M2)."""
+    """Serves weekly projections written by `ml/startsit_ml/predict.py`.
 
-    def __init__(self, model_dir: str) -> None:
-        self.model_dir = Path(model_dir)
-        if not (self.model_dir / "manifest.json").exists():
-            raise FileNotFoundError(
-                f"No trained model in {self.model_dir}. Run `make train` or use projector=baseline."
-            )
-        # TODO(M2): load manifest + per-quantile boosters, and a feature builder for the week.
+    Reads artifacts/projections/{season}_w{week}.json. Players the model doesn't cover
+    (kickers, defenses, rookies with no Sleeper ID match) and any week without a file
+    fall back to the baseline. Players on bye get a zero projection.
+    """
+
+    def __init__(self, model_dir: str, fallback: Projector) -> None:
+        self.dir = Path(model_dir) / "projections"
+        self.fallback = fallback
+        self._cache: dict[Path, tuple[float, dict]] = {}
+
+    def _load(self, season: int, week: int) -> dict | None:
+        path = self.dir / f"{season}_w{week}.json"
+        try:
+            mtime = path.stat().st_mtime
+        except FileNotFoundError:
+            log.info("no model projections at %s; using baseline", path)
+            return None
+        cached = self._cache.get(path)
+        if cached and cached[0] == mtime:
+            return cached[1]
+        data = json.loads(path.read_text())
+        self._cache[path] = (mtime, data)
+        return data
 
     async def project(self, player_ids, positions, season, week, scoring):
-        raise NotImplementedError("ModelProjector lands in milestone M2")
+        data = self._load(season, week)
+        table = (data or {}).get("scorings", {}).get(scoring)
+        if table is None:
+            return await self.fallback.project(player_ids, positions, season, week, scoring)
+
+        bye = set(data.get("bye", []))
+        out: dict[str, Projection] = {}
+        missing: list[str] = []
+        for pid in player_ids:
+            if pid in bye:
+                out[pid] = Projection(floor=0, median=0, ceiling=0, source="bye")
+            elif pid in table:
+                f, m, c = table[pid]
+                out[pid] = Projection(floor=f, median=m, ceiling=c, source="model")
+            else:
+                missing.append(pid)
+        if missing:
+            out.update(await self.fallback.project(missing, positions, season, week, scoring))
+        return out
