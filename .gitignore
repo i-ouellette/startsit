@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node / Next
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Data & models (regenerate with `make train`)
+ml/data/
+ml/artifacts/
+
+# Env
+.env
+.env.local
+.DS_Store

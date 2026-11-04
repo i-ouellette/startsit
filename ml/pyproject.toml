@@ -1,0 +1,20 @@
+[project]
+name = "startsit-ml"
+version = "0.1.0"
+description = "Training pipeline for floor/median/ceiling fantasy projections"
+requires-python = ">=3.11"
+dependencies = [
+    "nflreadpy>=0.1",
+    "polars>=1.0",
+    "pyarrow>=15",
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "lightgbm>=4.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
